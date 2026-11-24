@@ -128,13 +128,20 @@
       $('#reset').onclick = reset;
       return;
     }
+    const maxDay = Math.max(...Object.values(byDay).map((l) => l.length));
     timeline.innerHTML = days.filter((d) => byDay[d]).map((d) => {
       const list = byDay[d];
       const provisional = meta.provisional_from && d >= meta.provisional_from;
+      const nH = list.filter((i) => i.tab === 'harvest').length;
+      const nO = list.length - nH;
+      const pct = (n) => ((n / maxDay) * 100).toFixed(1) + '%';
+      const meterLabel = `${list.length} אירועים` + (nH && nO ? `: ${nH} מסיק, ${nO} אחרים` : '');
       return `<section class="day" id="d-${d}" data-day="${d}" aria-labelledby="h-${d}">` +
         `<div class="day-head"><h2 class="day-num" id="h-${d}" tabindex="-1">${parse(d).getUTCDate()} <small>${esc(fmtMonth.format(parse(d)))}</small></h2>` +
         `<p class="day-date">${esc(fmtWeekday.format(parse(d)))}</p>` +
-        `<p class="day-total">${list.length === 1 ? 'אירוע אחד' : `${list.length} אירועים`}</p>` +
+        `<div class="meter" role="img" aria-label="${esc(meterLabel)}" title="${esc(meterLabel)}">` +
+          `<span class="meter-track"><span class="m-h" style="width:${pct(nH)}"></span><span class="m-o" style="width:${pct(nO)}"></span></span>` +
+          `<span class="meter-n" aria-hidden="true">${list.length}</span></div>` +
         (provisional ? '<p class="day-provisional">נתונים חלקיים</p>' : '') +
         `</div><ol class="incidents">${list.map(incidentHtml).join('')}</ol></section>`;
     }).join('');
