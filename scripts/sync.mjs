@@ -229,15 +229,41 @@ async function syncMedia() {
     });
     count++;
   }
-  await writeFile(path.join(dataDir, 'media.json'), JSON.stringify(media));
+  await writeFile(path.join(dataDir, 'sources', 'media-sheet.json'), JSON.stringify(media));
   console.log(`media: ${count} links on ${Object.keys(media).length} incidents`);
 }
 
 if (!MEDIA_CSV_URL) {
-  console.log('media: no mediaCsvUrl configured — keeping existing data/media.json');
+  console.log('media: no mediaCsvUrl configured — keeping the last sheet snapshot');
 } else {
   try { await syncMedia(); }
-  catch (e) { warn(`${e.message} — kept the previous data/media.json (is the sheet shared "anyone with the link"?)`); }
+  catch (e) { warn(`${e.message} — kept the last sheet snapshot (is the sheet shared "anyone with the link"?)`); }
 }
+
+// ---------- build data/media.json = sheet snapshot + approved web-search finds ----------
+// Rebuilt from scratch each run, so un-approving a found link removes it from the site.
+const mediaPath = path.join(dataDir, 'media.json');
+let media = {};
+try { media = JSON.parse(await readFile(path.join(dataDir, 'sources', 'media-sheet.json'), 'utf8')); } catch {}
+try {
+  const found = JSON.parse((await readFile(path.join(dataDir, 'sources', 'media-found.json'), 'utf8')).replace(/^﻿/, ''));
+  const known = new Set(incidents.map((i) => i.id));
+  let added = 0;
+  for (const [id, items] of Object.entries(found)) {
+    if (id.startsWith('_') || !Array.isArray(items)) continue;
+    if (!known.has(id)) { warn(`media-found: unknown incident id "${id}"`); continue; }
+    for (const m of items) {
+      if (!m.approved) continue;
+      const list = (media[id] ||= []);
+      if (list.some((x) => x.url === m.url)) continue;
+      list.push({ kind: m.kind === 'video' ? 'video' : 'article', title: m.title, url: m.url, source: m.source || '' });
+      added++;
+    }
+  }
+  console.log(`media-found: ${added} approved links added`);
+} catch (e) {
+  if (e.code !== 'ENOENT') warn(`media-found: ${e.message}`);
+}
+await writeFile(mediaPath, JSON.stringify(media));
 
 await writeFile(path.join(dataDir, 'warnings.json'), JSON.stringify(warnings, null, 2));
