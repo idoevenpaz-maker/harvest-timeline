@@ -361,6 +361,13 @@
     document.querySelectorAll('.day').forEach((s) => io.observe(s));
   }
 
+  // back-to-top button, shown once the reader has scrolled down a screen
+  const toTop = $('#to-top');
+  const updateToTop = () => { toTop.hidden = scrollY < innerHeight; };
+  window.addEventListener('scroll', updateToTop, { passive: true });
+  toTop.addEventListener('click', () => { scrollTo({ top: 0 }); $('.title').setAttribute('tabindex', '-1'); $('.title').focus({ preventScroll: true }); });
+  updateToTop();
+
   render();
   scrollToNewest();
 

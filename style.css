@@ -40,11 +40,24 @@ a { color: var(--link); }
 
 /* ---------- chart ---------- */
 .season { padding: 28px 0 12px; overflow-x: clip; }
-.season-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 14px; }
+.season-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 10px; }
 .key::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-inline-end: 6px; border-radius: 2px; vertical-align: -1px; }
 .key-all::before { background: var(--bar); }
 .key-killed::before { background: var(--killed); }
-.season-hint { border: 1px solid #6b6e73; border-radius: 6px; padding: 4px 10px; line-height: 1.3; }
+.season-hint { width: fit-content; margin: 0 0 14px; font-size: 15px; color: var(--muted); border: 1px solid #6b6e73; border-radius: 6px; padding: 4px 10px; line-height: 1.3; }
+
+.to-top {
+  position: fixed; left: 20px; bottom: 20px; z-index: 20;
+  width: 48px; height: 48px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--bar); color: #fff;
+  border: 1px solid color-mix(in srgb, #fff 25%, var(--bar));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+.to-top svg { width: 22px; height: 22px; }
+.to-top:hover { background: var(--bar-hover); color: #2a241c; }
+.to-top[hidden] { display: none; }
 
 .seg { display: inline-flex; border: 1px solid var(--muted); border-radius: 999px; overflow: hidden; }
 .seg button {
@@ -216,7 +229,7 @@ a { color: var(--link); }
   .chart.is-days .day-bar { flex-basis: 5px; }
   .strip-axis .src-switch::before { height: 138px; }
   .scroll-btn { top: 32px; }
-  .season-hint { display: none; }
+  .to-top { left: 14px; bottom: 14px; width: 44px; height: 44px; }
   .filters { position: static; backdrop-filter: none; }
   .filters-row { gap: 8px 12px; }
   .field input { width: 9em; }
