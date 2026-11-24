@@ -25,18 +25,16 @@
   // ---------- dates ----------
   const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
   const iso = (dt) => dt.toISOString().slice(0, 10);
-  const fmtLong = new Intl.DateTimeFormat('he', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const fmtWeekday = new Intl.DateTimeFormat('he', { weekday: 'long', timeZone: 'UTC' });
   const fmtShort = new Intl.DateTimeFormat('he', { day: 'numeric', month: 'long', timeZone: 'UTC' });
   const fmtMonth = new Intl.DateTimeFormat('he', { month: 'long', timeZone: 'UTC' });
 
   const days = [];
   for (let d = parse(meta.campaign_start); iso(d) <= meta.latest_date; d = new Date(d.getTime() + 864e5)) days.push(iso(d));
-  const dayIndex = Object.fromEntries(days.map((d, i) => [d, i + 1]));
 
-  $('#days-count').textContent = days.length;
   $('#updated').textContent = fmtShort.format(parse(meta.data_updated));
   $('#lede').textContent =
-    `אירועי אלימות של מתנחלים נגד פלסטינים בגדה המערבית מאז תחילת עונת המסיק ב-${fmtShort.format(parse(meta.campaign_start))}, יום אחר יום.`;
+    `${incidents.length.toLocaleString('he')} אירועי אלימות של מתנחלים נגד פלסטינים בגדה המערבית מאז ${fmtShort.format(parse(meta.campaign_start))}, יום אחר יום.`;
 
   // ---------- filter controls ----------
   const offenceSel = $('#f-offence');
@@ -82,7 +80,7 @@
       const h = list.filter((i) => i.tab === 'harvest').length;
       const o = list.length - h;
       const killed = list.some((i) => i.killed);
-      const label = `יום ${dayIndex[d]}, ${fmtShort.format(parse(d))}: ${list.length} אירועים`;
+      const label = `${fmtShort.format(parse(d))}: ${list.length} אירועים`;
       return `<button type="button" class="day-bar${list.length ? '' : ' is-empty'}" role="listitem" data-day="${d}" title="${esc(label)}" aria-label="${esc(label)}"${list.length ? '' : ' disabled'}>` +
         `<span class="b-harvest" style="height:${(h / max) * 100}%"></span>` +
         `<span class="b-other" style="height:${(o / max) * 100}%"></span>` +
@@ -134,8 +132,8 @@
       const list = byDay[d];
       const provisional = meta.provisional_from && d >= meta.provisional_from;
       return `<section class="day" id="d-${d}" data-day="${d}" aria-labelledby="h-${d}">` +
-        `<div class="day-head"><h2 class="day-num" id="h-${d}" tabindex="-1"><small>יום</small>${dayIndex[d]}</h2>` +
-        `<p class="day-date">${esc(fmtLong.format(parse(d)))}</p>` +
+        `<div class="day-head"><h2 class="day-num" id="h-${d}" tabindex="-1">${parse(d).getUTCDate()} <small>${esc(fmtMonth.format(parse(d)))}</small></h2>` +
+        `<p class="day-date">${esc(fmtWeekday.format(parse(d)))}</p>` +
         `<p class="day-total">${list.length === 1 ? 'אירוע אחד' : `${list.length} אירועים`}</p>` +
         (provisional ? '<p class="day-provisional">נתונים חלקיים</p>' : '') +
         `</div><ol class="incidents">${list.map(incidentHtml).join('')}</ol></section>`;
