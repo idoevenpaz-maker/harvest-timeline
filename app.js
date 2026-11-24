@@ -220,6 +220,20 @@
   const setSbw = () => document.documentElement.style.setProperty('--sbw', (innerWidth - document.documentElement.clientWidth) + 'px');
   setSbw();
   window.addEventListener('resize', () => { setSbw(); updateScrollButtons(); });
+  // mouse wheel over the chart scrolls it sideways: wheel down -> right (earlier dates), wheel up -> left.
+  // At either end the wheel goes back to scrolling the page.
+  scroller.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // pinch-zoom / horizontal trackpad: native
+    const overflow = scroller.scrollWidth - scroller.clientWidth;
+    if (overflow <= 2) return;
+    const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? scroller.clientWidth : 1);
+    const canRight = scroller.scrollLeft < -1;
+    const canLeft = -scroller.scrollLeft < overflow - 1;
+    if ((dy > 0 && !canRight) || (dy < 0 && !canLeft)) return;
+    e.preventDefault();
+    hideTip();
+    scroller.scrollBy({ left: dy, behavior: 'instant' });
+  }, { passive: false });
   btnOlder.addEventListener('click', () => scroller.scrollBy({ left: scroller.clientWidth * 0.8 }));
   btnNewer.addEventListener('click', () => scroller.scrollBy({ left: -scroller.clientWidth * 0.8 }));
 
