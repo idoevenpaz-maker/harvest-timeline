@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Karantina:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header class="top">
@@ -21,6 +21,7 @@
   <section class="season" aria-label="מספר האירועים לאורך זמן">
     <div class="wrap">
       <div class="season-legend">
+        <span class="season-hint">לחצו על עמודה כדי לקפוץ אליה</span>
         <div class="seg" role="radiogroup" aria-label="תצוגת הגרף">
           <button type="button" role="radio" aria-checked="false" data-chart="year">שנים</button>
           <button type="button" role="radio" aria-checked="true" data-chart="month">חודשים</button>
@@ -28,7 +29,6 @@
         </div>
         <span class="key key-all" id="key-all">אירועים בחודש</span>
         <span class="key key-killed">מתוכם אירועי הריגה</span>
-        <span class="season-hint">לחצו על עמודה כדי לקפוץ אליה</span>
       </div>
       <div class="chart">
         <button type="button" class="scroll-btn scroll-older" aria-label="גלילה לתאריכים מוקדמים יותר" hidden>‹</button>

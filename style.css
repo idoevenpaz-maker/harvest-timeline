@@ -44,7 +44,7 @@ a { color: var(--link); }
 .key::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-inline-end: 6px; border-radius: 2px; vertical-align: -1px; }
 .key-all::before { background: var(--bar); }
 .key-killed::before { background: var(--killed); }
-.season-hint { margin-inline-start: auto; }
+.season-hint { border: 1px solid #6b6e73; border-radius: 6px; padding: 4px 10px; line-height: 1.3; }
 
 .seg { display: inline-flex; border: 1px solid var(--muted); border-radius: 999px; overflow: hidden; }
 .seg button {
