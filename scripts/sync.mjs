@@ -174,7 +174,6 @@ const meta = {
   provisional_from: yd.meta.provisional_from,
   yd_start: ydStart,
   zman_extracted: zman.extracted_at.slice(0, 10),
-  generated_at: new Date().toISOString(),
 };
 await writeFile(incPath, JSON.stringify({ meta, groups: GROUPS, incidents }));
 console.log(`incidents: ${incidents.length} = Zman ${zmIncidents.length} (${meta.start} → before ${ydStart}) + Yesh Din ${ydIncidents.length} (→ ${meta.latest})`);
