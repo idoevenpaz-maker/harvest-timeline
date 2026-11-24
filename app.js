@@ -100,20 +100,25 @@
     const mode = state.chart;
     const keys = BUCKETS[mode];
     const key = keyOf[mode];
-    const counts = {}, kills = {};
+    const counts = {}, kills = {}, dead = {}, deadMin = {};
     for (const i of shown) {
       const k = key(i.date);
       counts[k] = (counts[k] || 0) + 1;
       if (isKilling(i)) kills[k] = (kills[k] || 0) + 1;
+      if (i.killed) {
+        dead[k] = (dead[k] || 0) + i.killed;
+        if (i.src === 'zm') deadMin[k] = true; // Zman lists fatal incidents, not the number killed
+      }
     }
+    barInfo = { mode, counts, dead, deadMin };
     const max = Math.max(1, ...keys.map((k) => counts[k] || 0));
     chartBox.classList.toggle('is-days', mode === 'day');
     $('#key-all').textContent = KEY_TEXT[mode];
 
     strip.innerHTML = keys.map((k) => {
       const n = counts[k] || 0, kl = kills[k] || 0;
-      const label = `${bucketLabel[mode](k)}: ${n} אירועים` + (kl ? `, ${kl} מהם הריגה` : '');
-      return `<button type="button" class="day-bar${n ? '' : ' is-empty'}" role="listitem" data-key="${k}" title="${esc(label)}" aria-label="${esc(label)}"${n ? '' : ' disabled'}>` +
+      const label = tipLines(k).join(', ');
+      return `<button type="button" class="day-bar${n ? '' : ' is-empty'}" role="listitem" data-key="${k}" aria-label="${esc(label)}"${n ? '' : ' aria-disabled="true"'}>` +
         `<span class="b-killed-seg" style="height:${(kl / max) * 100}%"></span>` +
         `<span class="b-all" style="height:${((n - kl) / max) * 100}%"></span></button>`;
     }).join('');
@@ -140,6 +145,61 @@
 
     updateScrollButtons();
   }
+
+  // ---------- hover tooltip ----------
+  let barInfo = null;
+  function tipLines(k) {
+    const { mode, counts, dead, deadMin } = barInfo;
+    const lines = [];
+    if (mode === 'day') {
+      lines.push(`${k.slice(8, 10)}/${k.slice(5, 7)}/${k.slice(0, 4)}`, fmtWeekday.format(parse(k)));
+    } else if (mode === 'month') {
+      lines.push(fmtMonthYear.format(parse(k)));
+    } else {
+      lines.push(k);
+    }
+    const n = counts[k] || 0, d = dead[k] || 0;
+    lines.push(`מספר אירועים: ${n.toLocaleString('he')}`);
+    lines.push(`מספר הרוגים: ${deadMin[k] ? 'לפחות ' : ''}${d.toLocaleString('he')}`);
+    return lines;
+  }
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.setAttribute('aria-hidden', 'true');
+  tip.hidden = true;
+  document.body.appendChild(tip);
+  let tipKey = null;
+  function showTip(bar, x, y) {
+    const k = bar.dataset.key;
+    if (k !== tipKey) {
+      tipKey = k;
+      const [first, ...rest] = tipLines(k);
+      tip.innerHTML = `<strong>${esc(first)}</strong>` + rest.map((l) => `<span>${esc(l)}</span>`).join('');
+    }
+    tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight, gap = 14;
+    let left = x - w - gap;                       // RTL: prefer the box to the left of the pointer
+    if (left < 8) left = x + gap;
+    if (left + w > innerWidth - 8) left = innerWidth - w - 8;
+    let top = y + gap;
+    if (top + h > innerHeight - 8) top = y - h - gap;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function hideTip() { tip.hidden = true; tipKey = null; }
+  strip.addEventListener('mousemove', (e) => {
+    const bar = e.target.closest('.day-bar');
+    if (bar) showTip(bar, e.clientX, e.clientY); else hideTip();
+  });
+  strip.addEventListener('mouseleave', hideTip);
+  strip.addEventListener('focusin', (e) => {
+    const bar = e.target.closest('.day-bar');
+    if (!bar || !bar.matches(':focus-visible')) return;
+    const r = bar.getBoundingClientRect();
+    showTip(bar, r.left + r.width / 2, r.top + r.height / 2);
+  });
+  strip.addEventListener('focusout', hideTip);
+  scroller.addEventListener('scroll', hideTip, { passive: true });
 
   function scrollToNewest() {
     // RTL: the newest dates are at the left end
@@ -179,7 +239,7 @@
 
   strip.addEventListener('click', (e) => {
     const bar = e.target.closest('.day-bar');
-    if (!bar || bar.disabled) return;
+    if (!bar || bar.getAttribute('aria-disabled') === 'true') return;
     const k = bar.dataset.key;
     let target;
     if (state.chart === 'day') target = document.getElementById('d-' + k);

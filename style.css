@@ -83,6 +83,7 @@ a { color: var(--link); }
 .day-bar .b-all { background: var(--bar); }
 .day-bar .b-killed-seg { background: var(--killed); }
 .day-bar:hover .b-all, .day-bar:focus-visible .b-all { background: var(--bar-hover); }
+.day-bar.is-empty:hover { background: color-mix(in srgb, var(--bar-hover) 18%, transparent); }
 .day-bar[aria-current="true"]::after {
   content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 3px; background: var(--ink);
 }
@@ -93,6 +94,17 @@ a { color: var(--link); }
 .strip-axis span::before { content: ""; position: absolute; right: 0; top: -12px; height: 8px; border-right: 1px solid var(--muted); }
 .strip-axis .src-switch { top: auto; bottom: -2px; padding: 0 0 0 6px; color: var(--ink); font-weight: 600; transform: translateX(100%); }
 .strip-axis .src-switch::before { top: auto; bottom: 4px; right: auto; left: 0; height: 178px; border-right: 0; border-left: 1px dashed var(--ink); }
+.tip {
+  position: fixed; z-index: 50; left: 0; top: 0;
+  display: grid; gap: 1px;
+  background: #f3ead6; color: #2a241c;
+  padding: 8px 12px; border-radius: 6px;
+  font: 400 15px/1.45 var(--body);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  pointer-events: none; white-space: nowrap;
+}
+.tip[hidden] { display: none; }
+.tip strong { font-size: 16px; font-weight: 700; }
 .season-note { font-size: 14px; color: var(--muted); margin: 6px 0 0; max-width: 46em; }
 
 .scroll-btn {
