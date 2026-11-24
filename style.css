@@ -68,7 +68,8 @@ a { color: var(--link); }
 .seg button:hover { background: var(--paper); }
 .seg button[aria-checked="true"] { background: var(--ink); color: var(--bg); }
 
-.chart { position: relative; }
+/* full-bleed: the chart spans the whole window, past the content column on both sides */
+.chart { position: relative; margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2); }
 .chart-scroll { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
 .chart-inner { position: relative; width: max-content; min-width: 100%; padding-top: 4px; }
 .strip {
@@ -129,8 +130,8 @@ a { color: var(--link); }
 }
 .scroll-btn:hover { background: var(--bar); border-color: var(--bar); }
 .scroll-btn[hidden] { display: none; }
-.scroll-older { right: -6px; }
-.scroll-newer { left: -6px; }
+.scroll-older { right: 12px; }
+.scroll-newer { left: 12px; }
 
 /* ---------- filters ---------- */
 .filters {

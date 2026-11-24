@@ -65,7 +65,7 @@
     group: groups[params.get('group')] ? params.get('group') : '',
     place: params.get('place') || '',
     mediaOnly: params.get('media') === '1',
-    chart: BUCKETS[params.get('chart')] ? params.get('chart') : 'month',
+    chart: BUCKETS[params.get('chart')] ? params.get('chart') : 'day',
   };
   groupSel.value = state.group;
   $('#f-place').value = state.place;
@@ -76,7 +76,7 @@
     if (state.group) p.set('group', state.group);
     if (state.place) p.set('place', state.place);
     if (state.mediaOnly) p.set('media', '1');
-    if (state.chart !== 'month') p.set('chart', state.chart);
+    if (state.chart !== 'day') p.set('chart', state.chart);
     const q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
   };
@@ -216,7 +216,10 @@
     btnNewer.hidden = overflow <= 2 || atLeft;
   }
   scroller.addEventListener('scroll', updateScrollButtons, { passive: true });
-  window.addEventListener('resize', updateScrollButtons);
+  // full-bleed chart: 100vw includes the page scrollbar, so subtract it
+  const setSbw = () => document.documentElement.style.setProperty('--sbw', (innerWidth - document.documentElement.clientWidth) + 'px');
+  setSbw();
+  window.addEventListener('resize', () => { setSbw(); updateScrollButtons(); });
   btnOlder.addEventListener('click', () => scroller.scrollBy({ left: scroller.clientWidth * 0.8 }));
   btnNewer.addEventListener('click', () => scroller.scrollBy({ left: -scroller.clientWidth * 0.8 }));
 
