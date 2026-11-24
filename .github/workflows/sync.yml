@@ -1,0 +1,42 @@
+name: Sync data
+
+on:
+  schedule:
+    - cron: "30 4 * * *"   # after Yesh Din's nightly update (~03:00 UTC)
+    - cron: "30 15 * * *"  # afternoon pass, picks up new links from the sheet
+  workflow_dispatch: {}    # "Run workflow" button for an immediate update
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch incidents and media sheet
+        run: node scripts/sync.mjs
+      - name: Commit if changed
+        run: |
+          git config user.name "harvest-timeline-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Update data $(date -u +%Y-%m-%d)"
+            git push
+          fi
+      - name: Show warnings
+        if: always()
+        run: |
+          if [ -s data/warnings.json ] && [ "$(cat data/warnings.json)" != "[]" ]; then
+            echo "::warning::$(tr '\n' ' ' < data/warnings.json)"
+          fi
