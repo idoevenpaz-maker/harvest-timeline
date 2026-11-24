@@ -24,16 +24,27 @@
   const KIND_LABEL = { video: 'סרטון', article: 'כתבה' };
 
   // ---------- dates ----------
-  const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d || 1)); };
+  const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, (m || 1) - 1, d || 1)); };
+  const iso = (dt) => dt.toISOString().slice(0, 10);
   const fmtWeekday = new Intl.DateTimeFormat('he', { weekday: 'long', timeZone: 'UTC' });
   const fmtMonthYear = new Intl.DateTimeFormat('he', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const fmtMonth = new Intl.DateTimeFormat('he', { month: 'long', timeZone: 'UTC' });
   const fmtFull = new Intl.DateTimeFormat('he', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-  const months = [];
-  for (let d = parse(meta.start.slice(0, 7)); d <= parse(meta.latest.slice(0, 7)); d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
-    months.push(d.toISOString().slice(0, 7));
-  }
+  const allDays = [];
+  for (let d = parse(meta.start); iso(d) <= meta.latest; d = new Date(d.getTime() + 864e5)) allDays.push(iso(d));
+  const BUCKETS = {
+    year: [...new Set(allDays.map((d) => d.slice(0, 4)))],
+    month: [...new Set(allDays.map((d) => d.slice(0, 7)))],
+    day: allDays,
+  };
+  const keyOf = { year: (d) => d.slice(0, 4), month: (d) => d.slice(0, 7), day: (d) => d };
+  const bucketLabel = {
+    year: (k) => `שנת ${k}`,
+    month: (k) => fmtMonthYear.format(parse(k)),
+    day: (k) => `${fmtWeekday.format(parse(k))}, ${fmtFull.format(parse(k))}`,
+  };
+  const KEY_TEXT = { year: 'אירועים בשנה', month: 'אירועים בחודש', day: 'אירועים ביום' };
   const isKilling = (i) => i.groups.includes('killing');
 
   $('#updated').textContent = fmtFull.format(parse(meta.updated));
@@ -54,6 +65,7 @@
     group: groups[params.get('group')] ? params.get('group') : '',
     place: params.get('place') || '',
     mediaOnly: params.get('media') === '1',
+    chart: BUCKETS[params.get('chart')] ? params.get('chart') : 'month',
   };
   groupSel.value = state.group;
   $('#f-place').value = state.place;
@@ -64,6 +76,7 @@
     if (state.group) p.set('group', state.group);
     if (state.place) p.set('place', state.place);
     if (state.mediaOnly) p.set('media', '1');
+    if (state.chart !== 'month') p.set('chart', state.chart);
     const q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
   };
@@ -73,32 +86,107 @@
     (!state.place || i.place.includes(state.place)) &&
     (!state.mediaOnly || (media[i.id] && media[i.id].length));
 
-  // ---------- month chart ----------
-  const chart = $('#strip');
+  // ---------- chart ----------
+  const chartBox = $('.chart');
+  const scroller = $('#chart-scroll');
+  const inner = $('#chart-inner');
+  const strip = $('#strip');
   const axis = $('#strip-axis');
+  const btnOlder = $('.scroll-older');
+  const btnNewer = $('.scroll-newer');
+  let shown = incidents;
 
-  function renderChart(byMonth) {
-    const max = Math.max(1, ...months.map((m) => (byMonth[m] || []).length));
-    chart.innerHTML = months.map((m) => {
-      const list = byMonth[m] || [];
-      const k = list.filter(isKilling).length;
-      const label = `${fmtMonthYear.format(parse(m))}: ${list.length} אירועים` + (k ? `, ${k} מהם הריגה` : '');
-      return `<button type="button" class="day-bar${list.length ? '' : ' is-empty'}" role="listitem" data-month="${m}" title="${esc(label)}" aria-label="${esc(label)}"${list.length ? '' : ' disabled'}>` +
-        `<span class="b-killed-seg" style="height:${(k / max) * 100}%"></span>` +
-        `<span class="b-all" style="height:${((list.length - k) / max) * 100}%"></span>` +
-        '</button>';
+  function renderChart() {
+    const mode = state.chart;
+    const keys = BUCKETS[mode];
+    const key = keyOf[mode];
+    const counts = {}, kills = {};
+    for (const i of shown) {
+      const k = key(i.date);
+      counts[k] = (counts[k] || 0) + 1;
+      if (isKilling(i)) kills[k] = (kills[k] || 0) + 1;
+    }
+    const max = Math.max(1, ...keys.map((k) => counts[k] || 0));
+    chartBox.classList.toggle('is-days', mode === 'day');
+    $('#key-all').textContent = KEY_TEXT[mode];
+
+    strip.innerHTML = keys.map((k) => {
+      const n = counts[k] || 0, kl = kills[k] || 0;
+      const label = `${bucketLabel[mode](k)}: ${n} אירועים` + (kl ? `, ${kl} מהם הריגה` : '');
+      return `<button type="button" class="day-bar${n ? '' : ' is-empty'}" role="listitem" data-key="${k}" title="${esc(label)}" aria-label="${esc(label)}"${n ? '' : ' disabled'}>` +
+        `<span class="b-killed-seg" style="height:${(kl / max) * 100}%"></span>` +
+        `<span class="b-all" style="height:${((n - kl) / max) * 100}%"></span></button>`;
     }).join('');
-    // year ticks at each January (and the first month)
-    axis.innerHTML = months.map((m, idx) => m.endsWith('-01')
-      ? `<span style="right:${(idx / months.length) * 100}%">${m.slice(0, 4)}</span>` : ''
-    ).join('');
-    // where the data source changes (Zman -> Yesh Din): Yesh Din documents far more incidents per month
-    const sw = months.indexOf(meta.yd_start.slice(0, 7));
-    if (sw >= 0) {
-      const frac = (Number(meta.yd_start.slice(8, 10)) - 1) / 30;
-      axis.insertAdjacentHTML('beforeend', `<span class="src-switch" style="right:${((sw + frac) / months.length) * 100}%">מכאן: יש דין</span>`);
+
+    // axis labels
+    const pos = (idx) => `right:${(idx / keys.length) * 100}%`;
+    let ticks = '';
+    keys.forEach((k, idx) => {
+      if (mode === 'year') ticks += `<span style="${pos(idx)}">${k}</span>`;
+      else if (mode === 'month' && k.endsWith('-01')) ticks += `<span style="${pos(idx)}">${k.slice(0, 4)}</span>`;
+      else if (mode === 'day' && k.endsWith('-01')) {
+        const dt = parse(k);
+        ticks += `<span style="${pos(idx)}">${esc(fmtMonth.format(dt))}${k.slice(5, 7) === '01' ? ' ' + k.slice(0, 4) : ''}</span>`;
+      }
+    });
+    // where the data source changes (Zman -> Yesh Din): Yesh Din documents far more incidents per period
+    const sw = meta.yd_start;
+    let swPos = -1;
+    if (mode === 'day') swPos = keys.indexOf(sw);
+    else if (mode === 'month') swPos = keys.indexOf(sw.slice(0, 7)) + (Number(sw.slice(8, 10)) - 1) / 30;
+    else swPos = keys.indexOf(sw.slice(0, 4)) + (parse(sw) - parse(sw.slice(0, 4))) / (365 * 864e5);
+    if (swPos >= 0) ticks += `<span class="src-switch" style="right:${(swPos / keys.length) * 100}%">מכאן: יש דין</span>`;
+    axis.innerHTML = ticks;
+
+    updateScrollButtons();
+  }
+
+  function scrollToNewest() {
+    // RTL: the newest dates are at the left end
+    scroller.style.scrollBehavior = 'auto';
+    scroller.scrollLeft = -(scroller.scrollWidth - scroller.clientWidth);
+    scroller.style.scrollBehavior = '';
+    updateScrollButtons();
+  }
+  function updateScrollButtons() {
+    const overflow = scroller.scrollWidth - scroller.clientWidth;
+    const atRight = scroller.scrollLeft >= -2;              // oldest end
+    const atLeft = -scroller.scrollLeft >= overflow - 2;    // newest end
+    btnOlder.hidden = overflow <= 2 || atRight;
+    btnNewer.hidden = overflow <= 2 || atLeft;
+  }
+  scroller.addEventListener('scroll', updateScrollButtons, { passive: true });
+  window.addEventListener('resize', updateScrollButtons);
+  btnOlder.addEventListener('click', () => scroller.scrollBy({ left: scroller.clientWidth * 0.8 }));
+  btnNewer.addEventListener('click', () => scroller.scrollBy({ left: -scroller.clientWidth * 0.8 }));
+
+  // keep the bar of the day being read visible inside the chart (horizontal only)
+  function revealBar(bar) {
+    if (scroller.scrollWidth <= scroller.clientWidth) return;
+    const b = bar.getBoundingClientRect(), c = scroller.getBoundingClientRect();
+    if (b.left < c.left + 20 || b.right > c.right - 20) {
+      scroller.scrollBy({ left: (b.left + b.width / 2) - (c.left + c.width / 2) });
     }
   }
+
+  const segButtons = [...document.querySelectorAll('.seg button')];
+  const setSeg = () => segButtons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.chart === state.chart)));
+  segButtons.forEach((b) => b.addEventListener('click', () => {
+    if (state.chart === b.dataset.chart) return;
+    state.chart = b.dataset.chart; setSeg(); syncUrl(); renderChart(); scrollToNewest(); markCurrent();
+  }));
+  setSeg();
+
+  strip.addEventListener('click', (e) => {
+    const bar = e.target.closest('.day-bar');
+    if (!bar || bar.disabled) return;
+    const k = bar.dataset.key;
+    let target;
+    if (state.chart === 'day') target = document.getElementById('d-' + k);
+    else if (state.chart === 'month') target = document.getElementById('m-' + k);
+    else target = document.querySelector(`.month[data-month^="${k}-"]`); // newest month of that year
+    if (target) { target.scrollIntoView(); target.querySelector('.day-num')?.focus({ preventScroll: true }); }
+  });
 
   // ---------- incidents ----------
   function incidentHtml(i) {
@@ -108,9 +196,7 @@
       const cls = t === 'הריגה' ? ' class="t-killed"' : t === 'בנוכחות כוחות ביטחון' ? ' class="t-sf"' : '';
       tags.push(`<li${cls}>${esc(t)}</li>`);
     }
-    const srcLinks = i.src === 'yd'
-      ? [{ name: 'יש דין', url: YD_PAGE }]
-      : i.links;
+    const srcLinks = i.src === 'yd' ? [{ name: 'יש דין', url: YD_PAGE }] : i.links;
     const seen = {};
     const srcs = srcLinks.map((l) => {
       seen[l.name] = (seen[l.name] || 0) + 1;
@@ -132,13 +218,8 @@
   }
 
   function render() {
-    const shown = incidents.filter(matches);
-    const byDay = {}, byMonth = {};
-    for (const i of shown) {
-      (byDay[i.date] ||= []).push(i);
-      (byMonth[i.date.slice(0, 7)] ||= []).push(i);
-    }
-    renderChart(byMonth);
+    shown = incidents.filter(matches);
+    renderChart();
     $('#count').textContent = `${shown.length.toLocaleString('he')} אירועים`;
 
     if (!shown.length) {
@@ -146,26 +227,30 @@
       $('#reset').onclick = reset;
       return;
     }
+    const byDay = {}, byMonth = {};
+    for (const i of shown) {
+      (byDay[i.date] ||= []).push(i);
+      byMonth[i.date.slice(0, 7)] = (byMonth[i.date.slice(0, 7)] || 0) + 1;
+    }
     const maxDay = Math.max(...Object.values(byDay).map((l) => l.length));
     const pct = (n) => ((n / maxDay) * 100).toFixed(1) + '%';
-    const daysDesc = Object.keys(byDay).sort().reverse();
     const html = [];
     let curMonth = null;
-    for (const d of daysDesc) {
+    for (const d of Object.keys(byDay).sort().reverse()) {
       const m = d.slice(0, 7);
       if (m !== curMonth) {
         if (curMonth) html.push('</section>');
         curMonth = m;
-        const n = byMonth[m].length;
-        html.push(`<section class="month" id="m-${m}" data-month="${m}"><h2 class="month-head">${esc(fmtMonthYear.format(parse(m)))}<span>${n === 1 ? 'אירוע אחד' : `${n.toLocaleString('he')} אירועים`}</span></h2>`);
+        const n = byMonth[m];
+        html.push(`<section class="month" id="m-${m}" data-month="${m}"><h3 class="month-head">${esc(fmtMonthYear.format(parse(m)))}<span>${n === 1 ? 'אירוע אחד' : `${n.toLocaleString('he')} אירועים`}</span></h3>`);
       }
       const list = byDay[d];
       const k = list.filter(isKilling).length;
       const provisional = meta.provisional_from && d >= meta.provisional_from;
       const meterLabel = `${list.length} אירועים` + (k ? `, ${k} מהם הריגה` : '');
       const dt = parse(d);
-      html.push(`<section class="day" id="d-${d}" aria-labelledby="h-${d}">` +
-        `<div class="day-head"><h3 class="day-num" id="h-${d}" tabindex="-1">${dt.getUTCDate()} <small>${esc(fmtMonth.format(dt))} ${dt.getUTCFullYear()}</small></h3>` +
+      html.push(`<section class="day" id="d-${d}" data-day="${d}" aria-labelledby="h-${d}">` +
+        `<div class="day-head"><h4 class="day-num" id="h-${d}" tabindex="-1">${dt.getUTCDate()} <small>${esc(fmtMonth.format(dt))} ${dt.getUTCFullYear()}</small></h4>` +
         `<p class="day-date">${esc(fmtWeekday.format(dt))}</p>` +
         `<div class="meter" role="img" aria-label="${esc(meterLabel)}" title="${esc(meterLabel)}">` +
           `<span class="meter-track"><span class="m-k" style="width:${pct(k)}"></span><span class="m-a" style="width:${pct(list.length - k)}"></span></span>` +
@@ -175,7 +260,7 @@
     }
     html.push('</section>');
     timeline.innerHTML = html.join('');
-    observeMonths();
+    observeDays();
   }
 
   function reset() {
@@ -193,31 +278,31 @@
   });
   $('#f-media').addEventListener('change', (e) => { state.mediaOnly = e.target.checked; syncUrl(); render(); });
 
-  chart.addEventListener('click', (e) => {
-    const bar = e.target.closest('.day-bar');
-    if (!bar || bar.disabled) return;
-    const sec = document.getElementById('m-' + bar.dataset.month);
-    if (sec) { sec.scrollIntoView(); sec.querySelector('.day-num')?.focus({ preventScroll: true }); }
-  });
-
   const filters = $('.filters');
   new ResizeObserver(() => document.documentElement.style.setProperty('--filters-h', filters.offsetHeight + 'px')).observe(filters);
 
-  // highlight the month being read
-  let io;
-  function observeMonths() {
+  // highlight the chart bar of the day being read
+  let io, currentDay = null;
+  function markCurrent() {
+    if (!currentDay) return;
+    const k = keyOf[state.chart](currentDay);
+    strip.querySelectorAll('[aria-current]').forEach((b) => b.removeAttribute('aria-current'));
+    const bar = strip.querySelector(`[data-key="${k}"]`);
+    if (bar) { bar.setAttribute('aria-current', 'true'); revealBar(bar); }
+  }
+  function observeDays() {
     io?.disconnect();
     io = new IntersectionObserver((entries) => {
       const visible = entries.filter((e) => e.isIntersecting)[0];
-      if (!visible) return;
-      const m = visible.target.dataset.month;
-      chart.querySelectorAll('[aria-current]').forEach((b) => b.removeAttribute('aria-current'));
-      chart.querySelector(`[data-month="${m}"]`)?.setAttribute('aria-current', 'true');
+      if (!visible || visible.target.dataset.day === currentDay) return;
+      currentDay = visible.target.dataset.day;
+      markCurrent();
     }, { rootMargin: '-40% 0px -55% 0px' });
-    document.querySelectorAll('.month').forEach((s) => io.observe(s));
+    document.querySelectorAll('.day').forEach((s) => io.observe(s));
   }
 
   render();
+  scrollToNewest();
 
   // deep link to an incident (#z123, #h12, #o7)
   if (location.hash.length > 1) {

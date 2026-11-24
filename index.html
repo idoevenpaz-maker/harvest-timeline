@@ -18,15 +18,28 @@
     </div>
   </header>
 
-  <section class="season" aria-label="מספר האירועים בכל חודש">
+  <section class="season" aria-label="מספר האירועים לאורך זמן">
     <div class="wrap">
       <div class="season-legend">
-        <span class="key key-all">אירועים בחודש</span>
+        <div class="seg" role="radiogroup" aria-label="תצוגת הגרף">
+          <button type="button" role="radio" aria-checked="false" data-chart="year">שנים</button>
+          <button type="button" role="radio" aria-checked="true" data-chart="month">חודשים</button>
+          <button type="button" role="radio" aria-checked="false" data-chart="day">ימים</button>
+        </div>
+        <span class="key key-all" id="key-all">אירועים בחודש</span>
         <span class="key key-killed">מתוכם אירועי הריגה</span>
-        <span class="season-hint">לחצו על חודש כדי לקפוץ אליו</span>
+        <span class="season-hint">לחצו על עמודה כדי לקפוץ אליה</span>
       </div>
-      <div class="strip" id="strip" role="list"></div>
-      <div class="strip-axis" id="strip-axis" aria-hidden="true"></div>
+      <div class="chart">
+        <button type="button" class="scroll-btn scroll-older" aria-label="גלילה לתאריכים מוקדמים יותר" hidden>›</button>
+        <div class="chart-scroll" id="chart-scroll">
+          <div class="chart-inner" id="chart-inner">
+            <div class="strip" id="strip" role="list"></div>
+            <div class="strip-axis" id="strip-axis" aria-hidden="true"></div>
+          </div>
+        </div>
+        <button type="button" class="scroll-btn scroll-newer" aria-label="גלילה לתאריכים מאוחרים יותר" hidden>‹</button>
+      </div>
       <p class="season-note">עד ספטמבר 2026 הנתונים מזמן ישראל, ומ-27 בספטמבר 2026 מיש דין. יש דין מתעדת הרבה יותר אירועים בחודש, ולכן חלק מהקפיצה בגרף נובע מהחלפת המקור.</p>
     </div>
   </section>
@@ -50,7 +63,10 @@
     </div>
   </nav>
 
-  <main class="wrap" id="timeline" aria-label="ציר הזמן"></main>
+  <main class="wrap" aria-labelledby="log-title">
+    <h2 class="log-title" id="log-title">יומן אירועים</h2>
+    <div id="timeline"></div>
+  </main>
 
   <footer class="foot">
     <div class="wrap">
