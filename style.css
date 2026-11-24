@@ -64,9 +64,8 @@ a { color: var(--link); }
 .season { padding: 28px 0 12px; }
 .season-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 10px; }
 .key::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-inline-end: 6px; border-radius: 2px; vertical-align: -1px; }
-.key-harvest::before { background: var(--harvest); }
-.key-other::before { background: var(--other); }
-.key-killed::before { background: var(--killed); border-radius: 50%; width: 8px; height: 8px; }
+.key-all::before { background: var(--harvest); }
+.key-killed::before { background: var(--killed); }
 .season-hint { margin-inline-start: auto; }
 .strip {
   display: flex;
@@ -89,18 +88,22 @@ a { color: var(--link); }
   position: relative;
 }
 .day-bar span { display: block; width: 100%; }
-.day-bar .b-harvest { background: var(--harvest); }
-.day-bar .b-other { background: var(--other); }
-.day-bar .b-killed { flex: none; align-self: center; width: 7px !important; height: 7px; margin-bottom: 4px; border-radius: 50%; background: var(--killed); }
+.day-bar .b-all { background: var(--harvest); }
+.day-bar .b-killed-seg { background: var(--killed); }
 .strip-axis span::before { content: ""; position: absolute; right: 0; top: -12px; height: 8px; border-right: 1px solid var(--ink); }
 .strip-axis span { padding-right: 4px; }
-.day-bar:hover span:not(.b-killed), .day-bar[aria-current="true"] span:not(.b-killed) { filter: brightness(1.25); }
+.day-bar:hover span, .day-bar[aria-current="true"] span { filter: brightness(1.25); }
 .day-bar[aria-current="true"]::after {
   content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 3px; background: var(--ink);
 }
 .day-bar.is-empty { cursor: default; }
-.strip-axis { position: relative; height: 26px; margin-top: 10px; font-size: 14px; color: var(--muted); }
-.strip-axis span { position: absolute; top: 0; transform: translateX(50%); white-space: nowrap; }
+.strip-axis { position: relative; height: 44px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+.strip-axis span { position: absolute; top: 0; white-space: nowrap; }
+.strip-axis .src-switch { top: auto; bottom: -2px; padding: 0 6px 0 0; color: var(--ink); font-weight: 600; transform: translateX(100%); }
+.strip-axis .src-switch::before { top: auto; bottom: 4px; right: auto; left: 0; height: 174px; border-right: 0; border-left: 1px dashed var(--ink); }
+.strip-axis .src-switch { padding: 0 0 0 6px; }
+.season { overflow-x: clip; }
+.season-note { font-size: 14px; color: var(--muted); margin: 6px 0 0; max-width: 46em; }
 
 /* ---------- filters ---------- */
 .filters {
@@ -111,13 +114,6 @@ a { color: var(--link); }
   padding: 10px 0;
 }
 .filters-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
-.seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 999px; overflow: hidden; }
-.seg button {
-  font: 600 15px/1 var(--body); color: var(--ink); background: transparent;
-  border: 0; padding: 8px 16px; cursor: pointer;
-}
-.seg button + button { border-inline-start: 1px solid var(--ink); }
-.seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
 .field { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }
 .field select, .field input {
   font: 400 16px/1.2 var(--body); color: var(--ink); background: var(--paper);
@@ -130,6 +126,13 @@ a { color: var(--link); }
 
 /* ---------- timeline ---------- */
 #timeline { padding-top: 20px; padding-bottom: 40px; }
+.month { content-visibility: auto; contain-intrinsic-size: auto 4000px; scroll-margin-top: var(--filters-h); }
+.month-head {
+  font: 700 clamp(40px, 7vw, 64px)/1 var(--display);
+  margin: 0; padding: 36px 0 8px;
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+}
+.month-head span { font: 400 17px/1 var(--body); color: var(--muted); }
 .day {
   display: grid;
   grid-template-columns: 10rem 1fr;
@@ -145,8 +148,8 @@ a { color: var(--link); }
 .meter { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; }
 .meter-track { flex: 1 1 auto; display: flex; height: 12px; }
 .meter-track span { display: block; height: 100%; }
-.meter-track .m-h { background: var(--harvest); }
-.meter-track .m-o { background: var(--other); }
+.meter-track .m-a { background: var(--harvest); }
+.meter-track .m-k { background: var(--killed); }
 .meter-n { font: 700 22px/1 var(--display); min-width: 1.4em; }
 .day-provisional { font-size: 14px; color: var(--other); margin: 4px 0 0; }
 
@@ -157,14 +160,16 @@ a { color: var(--link); }
   padding-inline-start: 14px;
   padding-inline-end: 0;
 }
-.inc.is-other { border-inline-start-color: var(--other); }
 .inc.is-killed { border-inline-start-color: var(--killed); }
 .inc-place { font-weight: 700; margin: 0; }
 .inc-place .kind { font-weight: 400; font-size: 14px; color: var(--muted); margin-inline-start: 8px; }
 .inc-text { margin: 2px 0 6px; max-width: 46em; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
 .tags li { padding: 1px 8px; border-radius: 4px; background: var(--harvest-soft); }
-.inc.is-other .tags li { background: var(--other-soft); }
+.srcs { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.srcs a { color: var(--muted); }
+.srcs a:hover { color: var(--link); }
+.srcs .vid { font-size: 10px; vertical-align: 1px; }
 .inc .tags li.t-killed { background: var(--killed); color: #fff; font-weight: 700; }
 .inc .tags li.t-sf { background: transparent; border: 1px solid var(--rule); }
 
@@ -185,18 +190,22 @@ a { color: var(--link); }
 
 .foot { border-top: 1px solid var(--rule); padding: 20px 0 36px; font-size: 15px; color: var(--muted); }
 .foot p { margin: 0; max-width: 46em; }
+.foot ul { margin: 6px 0 0; padding-inline-start: 20px; max-width: 46em; display: grid; gap: 6px; }
 
 @media (max-width: 720px) {
   body { font-size: 16px; }
   .top { padding-top: 28px; }
   .lede { font-size: 17px; }
   .strip { height: 100px; gap: 1px; }
+  .strip-axis .src-switch::before { height: 134px; }
   .season-hint { display: none; }
   .filters { position: static; backdrop-filter: none; }
   .filters-row { gap: 8px 12px; }
   .field input { width: 9em; }
   .count { margin: 0; width: 100%; }
   .day { grid-template-columns: 1fr; padding: 0 0 18px; scroll-margin-top: 0; }
+  .month { scroll-margin-top: 0; }
+  .month-head { padding-top: 24px; }
   .day-head {
     top: 0;
     z-index: 2;

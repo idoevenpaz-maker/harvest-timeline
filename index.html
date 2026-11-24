@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>טרור יהודי</title>
-  <meta name="description" content="ציר זמן של אירועי אלימות מתנחלים נגד פלסטינים בגדה המערבית, יום אחר יום, עם כתבות וסרטונים לכל אירוע. הנתונים: יש דין.">
+  <meta name="description" content="ציר זמן של אירועי אלימות מתנחלים נגד פלסטינים בגדה המערבית ובמזרח ירושלים מאז אוקטובר 2023, יום אחר יום, עם מקורות, כתבות וסרטונים לכל אירוע.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Karantina:wght@400;700&display=swap" rel="stylesheet">
@@ -18,33 +18,28 @@
     </div>
   </header>
 
-  <section class="season" aria-label="מספר האירועים בכל יום">
+  <section class="season" aria-label="מספר האירועים בכל חודש">
     <div class="wrap">
       <div class="season-legend">
-        <span class="key key-harvest">אירועי מסיק</span>
-        <span class="key key-other">אירועים אחרים</span>
-        <span class="key key-killed">יום שבו נהרג אדם</span>
-        <span class="season-hint">לחצו על יום כדי לקפוץ אליו</span>
+        <span class="key key-all">אירועים בחודש</span>
+        <span class="key key-killed">מתוכם אירועי הריגה</span>
+        <span class="season-hint">לחצו על חודש כדי לקפוץ אליו</span>
       </div>
       <div class="strip" id="strip" role="list"></div>
       <div class="strip-axis" id="strip-axis" aria-hidden="true"></div>
+      <p class="season-note">עד ספטמבר 2026 הנתונים מזמן ישראל, ומ-27 בספטמבר 2026 מיש דין. יש דין מתעדת הרבה יותר אירועים בחודש, ולכן חלק מהקפיצה בגרף נובע מהחלפת המקור.</p>
     </div>
   </section>
 
   <nav class="filters" aria-label="סינון">
     <div class="wrap filters-row">
-      <div class="seg" role="radiogroup" aria-label="קבוצת אירועים">
-        <button type="button" role="radio" aria-checked="true" data-tab="all">הכל</button>
-        <button type="button" role="radio" aria-checked="false" data-tab="harvest">מסיק</button>
-        <button type="button" role="radio" aria-checked="false" data-tab="other">אחרים</button>
-      </div>
       <label class="field">
-        <span>סוג עבירה</span>
-        <select id="f-offence"><option value="">הכל</option></select>
+        <span>סוג אירוע</span>
+        <select id="f-group"><option value="">הכל</option></select>
       </label>
       <label class="field">
-        <span>יישוב</span>
-        <input id="f-place" list="places-list" placeholder="כל היישובים" autocomplete="off">
+        <span>מקום</span>
+        <input id="f-place" list="places-list" placeholder="כל המקומות" autocomplete="off">
         <datalist id="places-list"></datalist>
       </label>
       <label class="check">
@@ -59,7 +54,11 @@
 
   <footer class="foot">
     <div class="wrap">
-      <p>הנתונים על האירועים: <a href="https://www.yesh-din.org/settler-violence-during-the-olive-harvest/" target="_blank" rel="noopener">יש דין</a>. עודכנו לאחרונה ב-<span id="updated">—</span>. נתוני הימים האחרונים חלקיים ועשויים להשתנות.</p>
+      <p>מקורות הנתונים:</p>
+      <ul>
+        <li>אוקטובר 2023 עד ספטמבר 2026: <a href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">זמן ישראל, "המבצר: טרור יהודי בחסות הממשלה"</a>. התיעוד מבוסס על מקורות ישראליים בלבד, ולכן הוא הערכת חסר. הנתונים נלקחו ב-<span id="zman-date">—</span>.</li>
+        <li>מ-27 בספטמבר 2026: <a href="https://www.yesh-din.org/settler-violence-during-the-olive-harvest/" target="_blank" rel="noopener">יש דין</a>, מתעדכן מדי יום. עדכון אחרון: <span id="updated">—</span>. נתוני הימים האחרונים חלקיים ועשויים להשתנות.</li>
+      </ul>
     </div>
   </footer>
 
