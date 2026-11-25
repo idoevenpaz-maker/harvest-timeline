@@ -245,24 +245,38 @@ if (!MEDIA_CSV_URL) {
 const mediaPath = path.join(dataDir, 'media.json');
 let media = {};
 try { media = JSON.parse(await readFile(path.join(dataDir, 'sources', 'media-sheet.json'), 'utf8')); } catch {}
-try {
-  const found = JSON.parse((await readFile(path.join(dataDir, 'sources', 'media-found.json'), 'utf8')).replace(/^﻿/, ''));
-  const known = new Set(incidents.map((i) => i.id));
-  let added = 0;
-  for (const [id, items] of Object.entries(found)) {
-    if (id.startsWith('_') || !Array.isArray(items)) continue;
-    if (!known.has(id)) { warn(`media-found: unknown incident id "${id}"`); continue; }
-    for (const m of items) {
-      if (!m.approved) continue;
-      const list = (media[id] ||= []);
-      if (list.some((x) => x.url === m.url)) continue;
-      list.push({ kind: m.kind === 'video' ? 'video' : 'article', title: m.title, url: m.url, source: m.source || '' });
-      added++;
+// PREVIEW_UNAPPROVED=1 includes unapproved finds — for local review only, never commit that output.
+const includeUnapproved = process.env.PREVIEW_UNAPPROVED === '1';
+const knownIds = new Set(incidents.map((i) => i.id));
+for (const file of ['media-found.json', 'videos-found.json']) {
+  try {
+    const found = JSON.parse((await readFile(path.join(dataDir, 'sources', file), 'utf8')).replace(/^﻿/, ''));
+    let added = 0;
+    for (const [id, items] of Object.entries(found)) {
+      if (id.startsWith('_') || !Array.isArray(items)) continue;
+      if (!knownIds.has(id)) { warn(`${file}: unknown incident id "${id}"`); continue; }
+      for (const m of items) {
+        if (!m.approved && !(includeUnapproved && file === 'videos-found.json')) continue;
+        const list = (media[id] ||= []);
+        if (list.some((x) => x.url === m.url)) continue;
+        list.push({ kind: m.kind === 'video' ? 'video' : 'article', title: m.title, url: m.url, source: m.source || '', ...(m.thumb ? { thumb: m.thumb } : {}) });
+        added++;
+      }
     }
+    console.log(`${file}: ${added} ${includeUnapproved ? '(PREVIEW incl. unapproved) ' : 'approved '}links added`);
+  } catch (e) {
+    if (e.code !== 'ENOENT') warn(`${file}: ${e.message}`);
   }
-  console.log(`media-found: ${added} approved links added`);
-} catch (e) {
-  if (e.code !== 'ENOENT') warn(`media-found: ${e.message}`);
+}
+
+// a still frame for every YouTube video (used in the chart hover box)
+const youtubeId = (url) => (url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([\w-]{11})/) || [])[1];
+for (const list of Object.values(media)) {
+  for (const m of list) {
+    if (m.kind !== 'video' || m.thumb) continue;
+    const yt = youtubeId(m.url);
+    if (yt) m.thumb = `https://i.ytimg.com/vi/${yt}/mqdefault.jpg`;
+  }
 }
 await writeFile(mediaPath, JSON.stringify(media));
 

@@ -100,7 +100,7 @@
     const mode = state.chart;
     const keys = BUCKETS[mode];
     const key = keyOf[mode];
-    const counts = {}, kills = {}, dead = {}, deadMin = {};
+    const counts = {}, kills = {}, dead = {}, deadMin = {}, vids = {};
     for (const i of shown) {
       const k = key(i.date);
       counts[k] = (counts[k] || 0) + 1;
@@ -109,18 +109,26 @@
         dead[k] = (dead[k] || 0) + i.killed;
         if (i.src === 'zm') deadMin[k] = true; // Zman lists fatal incidents, not the number killed
       }
+      for (const m of media[i.id] || []) {
+        if (m.kind !== 'video') continue;
+        const list = (vids[k] ||= []);
+        if (!list.some((v) => v.url === m.url)) list.push({ ...m, place: i.place, date: i.date });
+      }
     }
-    barInfo = { mode, counts, dead, deadMin };
+    barInfo = { mode, counts, dead, deadMin, vids };
     const max = Math.max(1, ...keys.map((k) => counts[k] || 0));
     chartBox.classList.toggle('is-days', mode === 'day');
     $('#key-all').textContent = KEY_TEXT[mode];
+    $('#key-video').hidden = !Object.keys(vids).length;
 
     strip.innerHTML = keys.map((k) => {
       const n = counts[k] || 0, kl = kills[k] || 0;
       const label = tipLines(k).join(', ');
-      return `<button type="button" class="day-bar${n ? '' : ' is-empty'}" role="listitem" data-key="${k}" aria-label="${esc(label)}"${n ? '' : ' aria-disabled="true"'}>` +
+      const nv = (vids[k] || []).length;
+      return `<button type="button" class="day-bar${n ? '' : ' is-empty'}${nv ? ' has-video' : ''}" role="listitem" data-key="${k}" aria-label="${esc(label + (nv ? `, ${nv} סרטונים` : ''))}"${n ? '' : ' aria-disabled="true"'}>` +
         `<span class="b-killed-seg" style="height:${(kl / max) * 100}%"></span>` +
-        `<span class="b-all" style="height:${((n - kl) / max) * 100}%"></span></button>`;
+        `<span class="b-all" style="height:${((n - kl) / max) * 100}%"></span>` +
+        (nv ? '<span class="b-vid" aria-hidden="true"></span>' : '') + '</button>';
     }).join('');
 
     // axis labels
@@ -168,30 +176,62 @@
   tip.setAttribute('aria-hidden', 'true');
   tip.hidden = true;
   document.body.appendChild(tip);
-  let tipKey = null;
+  let tipKey = null, pinned = false, hideTimer = null;
+  const MAX_TIP_VIDEOS = 3;
+  function tipVideosHtml(k) {
+    const list = barInfo.vids[k] || [];
+    if (!list.length) return '';
+    const items = list.slice(0, MAX_TIP_VIDEOS).map((v) =>
+      `<a class="tip-vid" href="${esc(v.url)}" target="_blank" rel="noopener" tabindex="-1">` +
+        (v.thumb ? `<img src="${esc(v.thumb)}" alt="" width="128" height="72" loading="lazy">` : '<span class="tv-noimg">▶</span>') +
+        `<span class="tv-text"><span class="tv-title" dir="auto">${esc(v.title)}</span>` +
+        `<span class="tv-meta">${esc([v.source, barInfo.mode === 'day' ? v.place : `${v.place}, ${v.date.slice(8, 10)}/${v.date.slice(5, 7)}`].filter(Boolean).join(' | '))}</span></span></a>`
+    ).join('');
+    const extra = list.length - MAX_TIP_VIDEOS;
+    const more = extra > 0
+      ? `<span class="tv-more">${extra === 1 ? 'ועוד סרטון אחד' : `ועוד ${extra} סרטונים`}. לחצו על העמודה כדי לראות את כולם.</span>` : '';
+    return `<div class="tip-vids">${items}${more}</div>`;
+  }
   function showTip(bar, x, y) {
+    clearTimeout(hideTimer);
     const k = bar.dataset.key;
     if (k !== tipKey) {
       tipKey = k;
       const [first, ...rest] = tipLines(k);
-      tip.innerHTML = `<strong>${esc(first)}</strong>` + rest.map((l) => `<span>${esc(l)}</span>`).join('');
+      const videos = tipVideosHtml(k);
+      tip.innerHTML = `<strong>${esc(first)}</strong>` + rest.map((l) => `<span>${esc(l)}</span>`).join('') + videos;
+      pinned = !!videos;
+      tip.classList.toggle('is-pinned', pinned);
     }
     tip.hidden = false;
     const w = tip.offsetWidth, h = tip.offsetHeight, gap = 14;
-    let left = x - w - gap;                       // RTL: prefer the box to the left of the pointer
-    if (left < 8) left = x + gap;
-    if (left + w > innerWidth - 8) left = innerWidth - w - 8;
-    let top = y + gap;
-    if (top + h > innerHeight - 8) top = y - h - gap;
+    let left, top;
+    if (pinned) {
+      // anchored just under the bar, so the pointer can move straight down into the box
+      const b = bar.getBoundingClientRect(), s = strip.getBoundingClientRect();
+      left = b.left + b.width / 2 - w / 2;
+      top = s.bottom + 4;
+      if (top + h > innerHeight - 8) top = Math.max(8, s.top - h - 4);
+    } else {
+      left = x - w - gap;                       // RTL: prefer the box to the left of the pointer
+      if (left < 8) left = x + gap;
+      top = y + gap;
+      if (top + h > innerHeight - 8) top = y - h - gap;
+    }
+    left = Math.max(8, Math.min(left, innerWidth - w - 8));
     tip.style.left = left + 'px';
     tip.style.top = top + 'px';
   }
-  function hideTip() { tip.hidden = true; tipKey = null; }
+  function hideTip() { clearTimeout(hideTimer); tip.hidden = true; tipKey = null; pinned = false; }
+  const hideSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(hideTip, pinned ? 400 : 0); };
   strip.addEventListener('mousemove', (e) => {
     const bar = e.target.closest('.day-bar');
-    if (bar) showTip(bar, e.clientX, e.clientY); else hideTip();
+    if (bar) showTip(bar, e.clientX, e.clientY); else if (!pinned) hideTip();
   });
-  strip.addEventListener('mouseleave', hideTip);
+  strip.addEventListener('mouseleave', hideSoon);
+  tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+  tip.addEventListener('mouseleave', hideSoon);
+  window.addEventListener('scroll', () => { if (!tip.hidden) hideTip(); }, { passive: true });
   strip.addEventListener('focusin', (e) => {
     const bar = e.target.closest('.day-bar');
     if (!bar || !bar.matches(':focus-visible')) return;
