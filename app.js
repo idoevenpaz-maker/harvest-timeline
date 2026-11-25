@@ -183,7 +183,7 @@
     if (!list.length) return '';
     const items = list.slice(0, MAX_TIP_VIDEOS).map((v) =>
       `<a class="tip-vid" href="${esc(v.url)}" target="_blank" rel="noopener" tabindex="-1">` +
-        (v.thumb ? `<img src="${esc(v.thumb)}" alt="" width="128" height="72" loading="lazy">` : '<span class="tv-noimg">▶</span>') +
+        (v.thumb ? `<img src="${esc(v.thumb)}" alt="" width="128" height="72" decoding="async">` : '<span class="tv-noimg">▶</span>') +
         `<span class="tv-text"><span class="tv-title" dir="auto">${esc(v.title)}</span>` +
         `<span class="tv-meta">${esc([v.source, barInfo.mode === 'day' ? v.place : `${v.place}, ${v.date.slice(8, 10)}/${v.date.slice(5, 7)}`].filter(Boolean).join(' | '))}</span></span></a>`
     ).join('');
